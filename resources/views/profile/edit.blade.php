@@ -33,20 +33,7 @@
                 </div>
             </div>
 
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.delete-user-form')
-                </div>
-            </div>
-
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-7xl">
-                    <h2 class="text-lg font-medium text-gray-900 mb-6">
-                        {{ __('Tour của tôi') }}
-                    </h2>
-                    @include('profile.partials.my-tours')
-                </div>
-            </div>
+            
         </div>
     </div>
 

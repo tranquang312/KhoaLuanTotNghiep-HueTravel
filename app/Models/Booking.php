@@ -44,6 +44,11 @@ class Booking extends Model
         return $this->belongsTo(User::class, 'guide_id');
     }
 
+    public function review()
+    {
+        return $this->hasOne(TourReview::class);
+    }
+
     public function getTotalBooking()
     {
         return ($this->people + $this->children * 0.7) * $this->tour->price;

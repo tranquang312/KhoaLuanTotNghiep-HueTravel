@@ -59,7 +59,7 @@ class TourController extends Controller
         }
 
         return redirect()->route('admin.tours.index')
-            ->with('success', 'Tour created successfully.');
+            ->with('success', 'Tour đã được tạo thành công.');
     }
 
     public function show(Tour $tour)
@@ -122,7 +122,7 @@ class TourController extends Controller
 
 
         return redirect()->route('admin.tours.index')
-            ->with('success', 'Tour updated successfully.');
+            ->with('success', 'Tour đã được cập nhật thành công.');
     }
 
     public function destroy(Tour $tour)
@@ -140,7 +140,7 @@ class TourController extends Controller
         $tour->delete();
 
         return redirect()->route('admin.tours.index')
-            ->with('success', 'Tour deleted successfully.');
+            ->with('success', 'Tour đã được xóa thành công.');
     }
 
     public function deleteImage(TourImage $image)
@@ -148,6 +148,6 @@ class TourController extends Controller
         Storage::disk('public')->delete($image->image_path);
         $image->delete();
 
-        return back()->with('success', 'Image deleted successfully.');
+        return response()->json(['success' => true]);
     }
 }

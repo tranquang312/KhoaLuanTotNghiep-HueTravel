@@ -33,13 +33,20 @@
 
                         <div>
                             <x-input-label for="destinations" :value="__('Điểm đến')" />
-                            <select id="destinations" name="destinations[]" class="mt-1 block w-full" multiple required>
+                            <div class="mt-2 flex flex-wrap gap-2">
                                 @foreach($destinations as $destination)
-                                    <option value="{{ $destination->id }}" {{ in_array($destination->id, old('destinations', $tour->destinations->pluck('id')->toArray())) ? 'selected' : '' }}>
-                                        {{ $destination->name }}
-                                    </option>
+                                    <label class="inline-flex items-center mr-4 mb-2">
+                                        <input 
+                                            type="checkbox" 
+                                            name="destinations[]" 
+                                            value="{{ $destination->id }}" 
+                                            class="form-checkbox h-5 w-5 text-blue-600"
+                                            {{ in_array($destination->id, old('destinations', $tour->destinations->pluck('id')->toArray())) ? 'checked' : '' }}
+                                        >
+                                        <span class="ml-2">{{ $destination->name }}</span>
+                                    </label>
                                 @endforeach
-                            </select>
+                            </div>
                             <x-input-error class="mt-2" :messages="$errors->get('destinations')" />
                         </div>
 
@@ -93,7 +100,7 @@
 
             function deleteImage(imageId, button) {
                 if (confirm('Bạn có chắc chắn muốn xóa ảnh này?')) {
-                    fetch(`/admin/tours/images/${imageId}`, {
+                    fetch(`/admin/tours/delete-image/${imageId}`, {
                         method: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',

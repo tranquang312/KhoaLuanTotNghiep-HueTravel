@@ -18,8 +18,14 @@ class UsersTableSeeder extends Seeder
         $faker = Faker::create('vi_VN');
 
         // Create admin user
-
-
+        User::create([
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
+            'email_verified_at' => now(),
+            'bio' => $faker->text(100),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])->assignRole('admin');
         // Create 50 random users
         for ($i = 0; $i < 50; $i++) {
             User::create([

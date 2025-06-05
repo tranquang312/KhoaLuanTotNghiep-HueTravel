@@ -21,7 +21,15 @@ class DestinationController extends Controller
      */
     public function show(Destination $destination)
     {
-        $destination->load(['images', 'tours']);
+        $destination->load(['images', 'tours', 'posts.user', 'posts.likes']);
+        
+        // Add is_liked attribute to each post
+        if (auth()->check()) {
+            $destination->posts->each(function ($post) {
+                $post->is_liked = $post->likes->contains('user_id', auth()->id());
+            });
+        }
+        
         return view('destinations.show', compact('destination'));
     }
 }

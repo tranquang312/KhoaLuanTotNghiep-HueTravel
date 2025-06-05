@@ -15,9 +15,9 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()->hasRole('admin')) {
+        if ($request->user()->hasRole('admin') || $request->user()->hasRole('guide')) {
             return redirect()->route('admin.dashboard');
         }
-        return redirect()->route('dashboard');
+        return redirect()->route('home');
     }
 }

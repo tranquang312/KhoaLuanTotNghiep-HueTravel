@@ -5,6 +5,7 @@
                 <div class="p-6 text-gray-900">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-semibold">Quản lý Điểm đến</h2>
+                        @can('manage-destinations')
                         <a href="{{ route('admin.destinations.create') }}"
                             class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -12,13 +13,8 @@
                             </svg>
                             Thêm Điểm đến
                         </a>
-                    </div>
-
-                    @if(session('success'))
-                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                            <span class="block sm:inline">{{ session('success') }}</span>
-                        </div>
-                    @endif
+                        @endcan
+                    </div>                   
 
                     <div class="overflow-x-auto relative shadow-md sm:rounded-lg">
                         <table class="w-full text-sm text-left text-gray-500">
@@ -57,6 +53,7 @@
                                         </td>
                                         <td class="py-4 px-6">
                                             <div class="flex items-center space-x-3">
+                                                @can('manage-destinations')
                                                 <a href="{{ route('admin.destinations.edit', $destination) }}"
                                                     class="font-medium text-blue-600 hover:text-blue-900 flex items-center">
                                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,6 +74,7 @@
                                                         Xóa
                                                     </button>
                                                 </form>
+                                                @endcan
                                             </div>
                                         </td>
                                     </tr>

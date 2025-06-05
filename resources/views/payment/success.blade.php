@@ -35,8 +35,8 @@
                 <a href="{{ route('home') }}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
                     Về trang chủ
                 </a>
-                <a href="{{ route('tours.show', $booking->tour) }}" class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    Xem chi tiết tour
+                <a href="{{ route('profile.my-tours') }}" class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Tour của tôi
                 </a>
             </div>
         </div>

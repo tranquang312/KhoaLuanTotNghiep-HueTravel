@@ -6,11 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>@yield('title', 'Admin Dashboard - HueTravel')</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -35,6 +36,7 @@
                     </svg>
                     Dashboard
                 </a>
+                @can('view destinations')
                 <a href="{{ route('admin.destinations.index') }}"
                     class="flex items-center px-6 py-3 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.destinations.*') ? 'bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,6 +47,8 @@
                     </svg>
                     Quản lý Điểm đến
                 </a>
+                @endcan
+                @can('view tours')
                 <a href="{{ route('admin.tours.index') }}"
                     class="flex items-center px-6 py-3 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.tours.*') ? 'bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +58,8 @@
                     </svg>
                     Quản lý Tour
                 </a>
-
+                @endcan
+                @can('manage-bookings')
                 <!-- Quản lý đặt tour -->
                 <div x-data="{ open: false }" class="relative">
                     <button @click="open = !open"
@@ -74,21 +79,46 @@
                         </svg>
                     </button>
                     <div x-show="open" class="pl-4">
-                        <a href="{{ route('admin.bookings.index') }}"
-                            class="flex items-center px-6 py-2 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.bookings.index') ? 'bg-gray-700' : '' }}">
-                            Tất cả đặt tour
-                        </a>
-                        <a href="{{ route('admin.bookings.upcoming') }}"
-                            class="flex items-center px-6 py-2 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.bookings.upcoming') ? 'bg-gray-700' : '' }}">
-                            Chuyến đi sắp khởi hành
-                        </a>
-                        <a href="{{ route('admin.tour-departures.index') }}" class="nav-link">
-                            <i class="nav-icon fas fa-plane-departure"></i>
-                            <p>Quản lý chuyến đi</p>
-                        </a>
+                        <div class="space-y-1">
+                            <a href="{{ route('admin.bookings.index') }}" class="text-gray-300 hover:bg-gray-700 hover:text-white group flex items-center px-2 py-2 text-base font-medium rounded-md">
+                                <i class="fas fa-calendar-check mr-4 text-gray-400 group-hover:text-gray-300"></i>
+                                Đơn đặt tour
+                            </a>
+                        </div>
                     </div>
                 </div>
-
+                @endcan
+                <!-- Tour Departures -->
+                <a href="{{ route('admin.tour-departures.index') }}"
+                    class="flex items-center px-6 py-3 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.tour-departures.*') ? 'bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    Quản lý chuyến đi
+                </a>
+                @can('manage-posts')
+                <a href="{{ route('admin.posts.index') }}"
+                    class="flex items-center px-6 py-3 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.posts.*') ? 'bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+                    </svg>
+                    Quản lý bài viết
+                </a>
+                @endcan
+                @can('manage-reviews')
+                <a href="{{ route('admin.reviews.index') }}"
+                    class="flex items-center px-6 py-3 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.reviews.*') ? 'bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+                        </path>
+                    </svg>
+                    Quản lý Đánh giá
+                </a>
+                @endcan
+                @can('manage-users')
                 <a href="{{ route('admin.users.index') }}"
                     class="flex items-center px-6 py-3 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.users.*') ? 'bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,7 +128,9 @@
                     </svg>
                     Quản lý Người dùng
                 </a>
+                @endcan
 
+                @can('manage-roles')
                 <a href="{{ route('admin.roles.index') }}"
                     class="flex items-center px-6 py-3 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.roles.*') ? 'bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,6 +140,9 @@
                     </svg>
                     Quản lý Vai trò
                 </a>
+                @endcan
+
+                @can('manage-permissions')
                 <a href="{{ route('admin.permissions.index') }}"
                     class="flex items-center px-6 py-3 text-gray-100 hover:bg-gray-700 {{ request()->routeIs('admin.permissions.*') ? 'bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +152,7 @@
                     </svg>
                     Quản lý Quyền hạn
                 </a>
-
+                @endcan                
             </nav>
         </div>
 
@@ -180,6 +215,12 @@
                 </div>
             </nav>
 
+            <!-- Flash Messages -->
+            <x-flash-message type="success" />
+            <x-flash-message type="error" />
+            <x-flash-message type="warning" />
+            <x-flash-message type="info" />
+
             <!-- Page Content -->
             <main>
                 {{ $slot }}
@@ -206,8 +247,5 @@
     </script>
     @stack('scripts')
 </body>
-
-</html>
-
 
 </html>

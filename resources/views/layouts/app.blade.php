@@ -35,6 +35,12 @@
             </header>
         @endif
 
+        <!-- Flash Messages -->
+        <x-flash-message type="success" />
+        <x-flash-message type="error" />
+        <x-flash-message type="warning" />
+        <x-flash-message type="info" />
+
         <!-- Page Content -->
         <main>
             {{ $slot }}

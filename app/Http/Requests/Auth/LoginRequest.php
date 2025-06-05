@@ -31,6 +31,14 @@ class LoginRequest extends FormRequest
             'password' => ['required', 'string'],
         ];
     }
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'Ban cần nhập email.',
+            'email.email' => 'Email không hợp lệ.',
+            'password.required' => 'Ban cần nhập mật khẩu.',
+        ];
+    }
 
     /**
      * Attempt to authenticate the request's credentials.
@@ -80,6 +88,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('email')) . '|' . $this->ip());
     }
 }

@@ -5,13 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Destination;
 use App\Models\DestinationImage;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+use App\Traits\FlashMessage;
 
 class DestinationController extends Controller
 {
+    use FlashMessage;
+
     public function index()
     {
         $destinations = Destination::with('images')->latest()->paginate(10);
@@ -25,97 +27,98 @@ class DestinationController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'name' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'short_description' => 'required|string|max:500',
             'description' => 'required|string',
-            'images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'address' => 'required|string',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         $destination = Destination::create([
-            'name' => $validated['name'],
-            'address' => $validated['address'],
-            'short_description' => $validated['short_description'],
-            'description' => $validated['description'],
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
+            'description' => $request->description,
+            'address' => $request->address,
         ]);
 
+        // Handle images
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $imageName = Str::slug($destination->name) . '-' . time() . '-' . Str::random(10) . '.' . $image->getClientOriginalExtension();
-                $image->storeAs('destinations', $imageName, 'public');
-
+                $path = $image->store('destinations', 'public');
                 DestinationImage::create([
                     'destination_id' => $destination->id,
-                    'image_path' => 'destinations/' . $imageName
+                    'image_path' => $path
                 ]);
             }
         }
 
-        return redirect()->route('admin.destinations.index')
-            ->with('success', 'Điểm đến đã được thêm thành công.');
+        $this->flashSuccess('Điểm đến đã được tạo thành công.');
+        return redirect()->route('admin.destinations.index');
+    }
+
+    public function show(Destination $destination)
+    {
+        $destination->load('images');
+        return view('admin.destinations.show', compact('destination'));
     }
 
     public function edit(Destination $destination)
     {
-        // Lấy tất cả ảnh của điểm đến
-        $allImages = DB::table('destination_images')
-            ->where('destination_id', $destination->id)
-            ->get();
-
-        return view('admin.destinations.edit', compact('destination', 'allImages'));
+        $destination->load('images');
+        return view('admin.destinations.edit', compact('destination'));
     }
 
     public function update(Request $request, Destination $destination)
     {
-        $validated = $request->validate([
+        $request->validate([
             'name' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'short_description' => 'required|string|max:500',
             'description' => 'required|string',
-            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'address' => 'required|string',
+            'new_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         $destination->update([
-            'name' => $validated['name'],
-            'address' => $validated['address'],
-            'short_description' => $validated['short_description'],
-            'description' => $validated['description'],
+            'name' => $request->name,
+            'slug' => Str::slug($request->name),
+            'description' => $request->description,
+            'address' => $request->address,
         ]);
 
-        if ($destination->images()->count() > 0) {
-            $destination->images()->delete();
-            //Storage::disk('public')->deleteDirectory('destinations');
-        }
-
-        // update ảnh mới
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $imageName = Str::slug($destination->name) . '-' . time() . '-' . Str::random(10) . '.' . $image->getClientOriginalExtension();
-                $image->storeAs('destinations', $imageName, 'public');
-
+        // Handle new images
+        if ($request->hasFile('new_images')) {
+            foreach ($request->file('new_images') as $image) {
+                $path = $image->store('destinations', 'public');
                 DestinationImage::create([
                     'destination_id' => $destination->id,
-                    'image_path' => 'destinations/' . $imageName
+                    'image_path' => $path
                 ]);
             }
         }
 
-        return redirect()->route('admin.destinations.index')
-            ->with('success', 'Điểm đến đã được cập nhật thành công.');
+        $this->flashSuccess('Điểm đến đã được cập nhật thành công.');
+        return redirect()->route('admin.destinations.index');
     }
-
 
     public function destroy(Destination $destination)
     {
-        // Xóa tất cả ảnh
+        // Delete associated images from storage
         foreach ($destination->images as $image) {
             Storage::disk('public')->delete($image->image_path);
+            $image->delete();
         }
 
+        // Delete destination
         $destination->delete();
 
-        return redirect()->route('admin.destinations.index')
-            ->with('success', 'Điểm đến đã được xóa thành công.');
+        $this->flashSuccess('Điểm đến đã được xóa thành công.');
+        return redirect()->route('admin.destinations.index');
+    }
+
+    public function deleteImage(DestinationImage $image)
+    {
+        Storage::disk('public')->delete($image->image_path);
+        $image->delete();
+
+        return response()->json(['success' => true]);
     }
 }

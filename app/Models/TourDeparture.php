@@ -13,11 +13,12 @@ class TourDeparture extends Model
         'tour_id',
         'guide_id',
         'departure_date',
-        'status'
+        'status',
+        'guide_status'
     ];
 
     protected $casts = [
-        'departure_date' => 'datetime',
+        'departure_date' => 'datetime:d/m/Y',
     ];
 
     public function tour()
@@ -33,5 +34,9 @@ class TourDeparture extends Model
     public function bookings()
     {
         return $this->hasMany(Booking::class, 'tour_departure_id');
+    }
+    //lay so luong tour vao ngay date
+    public function countTourOnDate($date){
+        return $this->whereDate('departure_date', $date)->count();
     }
 }

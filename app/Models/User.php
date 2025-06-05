@@ -60,4 +60,14 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(GuideBooking::class, 'guide_id');
     }
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    public function tourDepartures()
+    {
+        return $this->hasMany(TourDeparture::class, 'guide_id');
+    }
 }

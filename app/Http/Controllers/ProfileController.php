@@ -67,4 +67,25 @@ class ProfileController extends Controller
             'bookings' => $bookings
         ]);
     }
+
+    public function posts(Request $request)
+    {
+        $query = auth()->user()->posts()
+            ->with(['destination', 'likes'])
+            ->withCount('likes');
+
+        if ($request->has('destination_id')) {
+            $query->where('destination_id', $request->destination_id);
+        }
+
+        $posts = $query->latest()->paginate(4);
+        $destinations = auth()->user()->posts()
+            ->with('destination')
+            ->get()
+            ->pluck('destination')
+            ->unique('id')
+            ->values();
+
+        return view('profile.posts', compact('posts', 'destinations'));
+    }
 }

@@ -21,9 +21,7 @@
                     <x-nav-link :href="route('destinations.index')" :active="request()->routeIs('destinations.*')">
                         {{ __('Điểm đến') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('contact')" :active="request()->routeIs('contact')">
-                        {{ __('Liên hệ') }}
-                    </x-nav-link>
+                    
                 </div>
             </div>
 
@@ -60,6 +58,12 @@
                         <x-slot name="content">
                             <x-dropdown-link :href="route('profile.edit')">
                                 {{ __('Thông tin cá nhân') }}
+                            </x-dropdown-link>
+                            <x-dropdown-link :href="route('profile.posts')">
+                                {{ __('Bài viết của tôi') }}
+                            </x-dropdown-link>
+                            <x-dropdown-link :href="route('profile.my-tours')">
+                                {{ __('Tour của tôi') }}
                             </x-dropdown-link>
 
                             <!-- Authentication -->

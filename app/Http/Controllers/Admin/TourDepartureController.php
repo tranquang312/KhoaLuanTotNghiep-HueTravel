@@ -3,97 +3,212 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tour;
 use App\Models\TourDeparture;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TourInfoMail;
+use App\Mail\TourCompletionMail;
 
 class TourDepartureController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $departures = TourDeparture::with('tour')->latest()->paginate(10);
-        return view('admin.tour-departures.index', compact('departures'));
+        $query = TourDeparture::with(['tour', 'guide', 'bookings'])
+            ->orderBy('departure_date', 'asc');
+
+        // Filter by date
+        if ($request->has('filter')) {
+            if ($request->filter === 'today') {
+                $query->whereDate('departure_date', now()->toDateString());
+            } elseif ($request->filter === 'next_7_days') {
+                $query->whereBetween('departure_date', [
+                    now()->startOfDay(),
+                    now()->addDays(7)->endOfDay()
+                ]);
+            }
+        }
+
+        // Filter by status
+        if ($request->has('status')) {
+            if ($request->status === 'pending') {
+                $query->whereNull('guide_id');
+            } elseif ($request->status === 'confirmed') {
+                $query->whereNotNull('guide_id')
+                    ->where('guide_status', 'confirmed');
+            }
+        }
+
+        $departures = $query->paginate(10);
+
+        // Get guides for assignment
+        $guides = User::role('guide')
+            ->withCount(['tourDepartures' => function ($query) {
+                $query->whereDate('departure_date', now()->toDateString());
+            }])
+            ->get();
+
+        return view('admin.tour-departures.index', compact('departures', 'guides'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function assignGuide(Request $request, TourDeparture $departure)
     {
-        $tours = Tour::all();
-        return view('admin.tour-departures.create', compact('tours'));
+        $request->validate([
+            'guide_id' => 'required|exists:users,id',
+        ]);
+        try {
+            DB::beginTransaction();
+
+            // Cập nhật tour departure với hướng dẫn viên mới
+            $departure->update([
+                'guide_id' => $request->guide_id,
+                'guide_status' => 'pending'
+            ]);
+
+            // Cập nhật trạng thái của tất cả booking liên quan
+            $departure->bookings()->where('status', 'pending')->update(['status' => 'confirmed']);
+
+            DB::commit();
+            return redirect()->route('admin.tour-departures.index')
+                ->with('success', 'Đã phân công hướng dẫn viên thành công.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'Có lỗi xảy ra khi phân công hướng dẫn viên: ' . $e->getMessage());
+        }
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function guideConfirm(TourDeparture $departure)
     {
-        $validated = $request->validate([
-            'tour_id' => 'required|exists:tours,id',
-            'departure_date' => 'required|date',
-            'return_date' => 'required|date|after:departure_date',
-            'available_seats' => 'required|integer|min:1',
-            'price' => 'required|numeric|min:0',
-            'status' => 'required|in:active,completed,cancelled',
-            'notes' => 'nullable|string'
+        // Kiểm tra xem người dùng hiện tại có phải là hướng dẫn viên được phân công không
+        if (auth()->id() !== $departure->guide_id) {
+            return redirect()->back()->with('error', 'Bạn không có quyền thực hiện hành động này.');
+        }
+
+        try {
+            DB::beginTransaction();
+            
+            $departure->update([
+                'guide_status' => 'confirmed'
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Đã xác nhận nhận chuyến đi thành công.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+
+    public function guideReject(TourDeparture $departure)
+    {
+        // Kiểm tra xem người dùng hiện tại có phải là hướng dẫn viên được phân công không
+        if (auth()->id() !== $departure->guide_id) {
+            return redirect()->back()->with('error', 'Bạn không có quyền thực hiện hành động này.');
+        }
+
+        try {
+            DB::beginTransaction();
+            
+            $departure->update([
+                'guide_status' => 'rejected',
+                'guide_id' => null
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Đã từ chối chuyến đi thành công.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+
+    public function showBookings(TourDeparture $departure)
+    {
+        // Kiểm tra xem người dùng hiện tại có phải là hướng dẫn viên được phân công không
+        if (auth()->id() !== $departure->guide_id) {
+            return redirect()->back()->with('error', 'Bạn không có quyền xem thông tin này.');
+        }
+
+        $bookings = $departure->bookings()->with(['user', 'tour'])->get();
+        return view('admin.tour-departures.bookings', compact('departure', 'bookings'));
+    }
+
+    public function sendTourInfo(TourDeparture $departure)
+    {
+        // Kiểm tra xem người dùng hiện tại có phải là hướng dẫn viên được phân công không
+        if (auth()->id() !== $departure->guide_id) {
+            return redirect()->back()->with('error', 'Bạn không có quyền thực hiện hành động này.');
+        }
+
+        try {
+            $bookings = $departure->bookings()->with(['user', 'tour'])->get();
+            
+            foreach ($bookings as $booking) {
+                // Gửi email thông tin chuyến đi cho từng khách hàng
+                Mail::to($booking->email)->send(new TourInfoMail($booking, $departure));
+            }
+
+            return redirect()->back()->with('success', 'Đã gửi thông tin chuyến đi cho khách hàng thành công.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi gửi email: ' . $e->getMessage());
+        }
+    }
+
+    public function completeTour(TourDeparture $departure)
+    {
+        // Kiểm tra xem người dùng hiện tại có phải là hướng dẫn viên được phân công không
+        if (auth()->id() !== $departure->guide_id) {
+            return redirect()->back()->with('error', 'Bạn không có quyền thực hiện hành động này.');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Cập nhật trạng thái chuyến đi
+            $departure->update([
+                'status' => 'completed'
+            ]);
+
+            // Cập nhật trạng thái các booking
+            foreach ($departure->bookings as $booking) {
+                $booking->update([
+                    'status' => 'completed'
+                ]);
+            }
+
+            // Gửi email cảm ơn và yêu cầu đánh giá cho từng khách hàng
+            $bookings = $departure->bookings()->with(['user', 'tour'])->get();
+            foreach ($bookings as $booking) {
+                Mail::to($booking->email)->send(new TourCompletionMail($booking, $departure));
+            }
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Đã xác nhận hoàn thành chuyến đi và gửi email cảm ơn cho khách hàng.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+
+    public function startTour(TourDeparture $departure)
+    {
+        // Kiểm tra xem tour đã có hướng dẫn viên và đã được xác nhận chưa
+        if (!$departure->guide || $departure->guide_status !== 'confirmed') {
+            return redirect()->back()->with('error', 'Tour chưa có hướng dẫn viên hoặc chưa được xác nhận.');
+        }
+
+        // Kiểm tra xem tour có đang ở trạng thái pending không
+        if ($departure->status !== 'pending') {
+            return redirect()->back()->with('error', 'Tour không thể khởi hành ở trạng thái hiện tại.');
+        }
+
+        // Cập nhật trạng thái tour thành active
+        $departure->update([
+            'status' => 'active'
         ]);
 
-        TourDeparture::create($validated);
-
-        return redirect()->route('admin.tour-departures.index')
-            ->with('success', 'Chuyến đi đã được tạo thành công.');
+        return redirect()->back()->with('success', 'Tour đã được khởi hành thành công.');
     }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(TourDeparture $tourDeparture)
-    {
-        $tours = Tour::all();
-        return view('admin.tour-departures.edit', compact('tourDeparture', 'tours'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, TourDeparture $tourDeparture)
-    {
-        $validated = $request->validate([
-            'tour_id' => 'required|exists:tours,id',
-            'departure_date' => 'required|date',
-            'return_date' => 'required|date|after:departure_date',
-            'available_seats' => 'required|integer|min:1',
-            'price' => 'required|numeric|min:0',
-            'status' => 'required|in:active,completed,cancelled',
-            'notes' => 'nullable|string'
-        ]);
-
-        $tourDeparture->update($validated);
-
-        return redirect()->route('admin.tour-departures.index')
-            ->with('success', 'Chuyến đi đã được cập nhật thành công.');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(TourDeparture $tourDeparture)
-    {
-        $tourDeparture->delete();
-
-        return redirect()->route('admin.tour-departures.index')
-            ->with('success', 'Chuyến đi đã được xóa thành công.');
-    }
-}
+} 

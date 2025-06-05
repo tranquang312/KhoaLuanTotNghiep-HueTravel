@@ -16,6 +16,8 @@ use App\Http\Controllers\DestinationController as ViewDestinationController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Admin\TourDepartureController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\TourReviewController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -89,12 +91,33 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/my-tours', [ProfileController::class, 'myTours'])->name('profile.my-tours');
     Route::put('/bookings/{booking}/cancel', [BookingController::class, 'cancel'])->name('bookings.cancel');
+
+    // Post management routes
+    Route::get('/profile/posts', [ProfileController::class, 'posts'])->name('profile.posts');
+    Route::get('/posts/{post}/edit', [PostController::class, 'edit'])->name('posts.edit');
+    Route::put('/posts/{post}', [PostController::class, 'update'])->name('posts.update');
+    Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
+    Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
+    Route::post('/posts/{post}/like', [PostController::class, 'like'])->name('posts.like');
+    Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
+    Route::get('/tour/review/{booking}', [TourReviewController::class, 'showReviewForm'])->name('tour.review');
+    Route::post('/tour/review/{booking}', [TourReviewController::class, 'submitReview'])->name('tour.submit-review');
+    Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
 });
 
 // Admin routes
-Route::middleware(['auth', 'check_permission:access-admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role:admin|guide'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Posts management
+    Route::middleware(['check_permission:manage-posts'])->group(function () {
+        Route::get('/posts', [App\Http\Controllers\Admin\PostController::class, 'index'])->name('posts.index');
+        Route::get('/posts/{post}', [App\Http\Controllers\Admin\PostController::class, 'show'])->name('posts.show');
+        Route::post('/posts/{post}/approve', [App\Http\Controllers\Admin\PostController::class, 'approve'])->name('posts.approve');
+        Route::post('/posts/{post}/reject', [App\Http\Controllers\Admin\PostController::class, 'reject'])->name('posts.reject');
+        Route::put('/posts/{post}/status', [App\Http\Controllers\Admin\PostController::class, 'updateStatus'])->name('posts.update-status');
+    });
 
     // Users management
     Route::middleware(['check_permission:manage-users'])->group(function () {
@@ -102,49 +125,66 @@ Route::middleware(['auth', 'check_permission:access-admin'])->prefix('admin')->n
     });
 
     // Roles management
-    Route::middleware([])->group(function () {
+    Route::middleware(['check_permission:manage-roles'])->group(function () {
         Route::resource('roles', RoleController::class);
     });
 
     // Permissions management
-    Route::middleware([])->group(function () {
+    Route::middleware(['check_permission:manage-permissions'])->group(function () {
         Route::resource('permissions', PermissionController::class);
     });
 
     // Tours management
-    Route::middleware(['check_permission:manage-tours'])->group(function () {
-        Route::resource('tours', TourController::class);
-    });
+    Route::get('/tours', [TourController::class, 'index'])->name('tours.index')->middleware(['check_permission:view tours']);
+    Route::get('/tours/create', [TourController::class, 'create'])->name('tours.create')->middleware(['check_permission:manage-tours']);
+    Route::post('/tours', [TourController::class, 'store'])->name('tours.store')->middleware(['check_permission:manage-tours']);
+    Route::delete('/tours/delete-image/{image}', [TourController::class, 'deleteImage'])->name('tours.images.destroy')->middleware(['check_permission:manage-tours']);
+    Route::get('/tours/{tour}/edit', [TourController::class, 'edit'])->name('tours.edit')->middleware(['check_permission:manage-tours']);
+    Route::put('/tours/{tour}', [TourController::class, 'update'])->name('tours.update')->middleware(['check_permission:manage-tours']);
+    Route::delete('/tours/{tour}', [TourController::class, 'destroy'])->name('tours.destroy')->middleware(['check_permission:manage-tours']);
 
     // Destinations management
-    Route::middleware(['check_permission:manage-destinations'])->group(function () {
-        Route::resource('destinations', DestinationController::class);
-    });
-
-    // Bookings management
+    Route::get('/destinations', [DestinationController::class, 'index'])->name('destinations.index')->middleware(['check_permission:view destinations']);
+    Route::get('/destinations/create', [DestinationController::class, 'create'])->name('destinations.create')->middleware(['check_permission:manage-destinations']);
+    Route::post('/destinations', [DestinationController::class, 'store'])->name('destinations.store')->middleware(['check_permission:manage-destinations']);
+    Route::get('/destinations/{destination}/edit', [DestinationController::class, 'edit'])->name('destinations.edit')->middleware(['check_permission:manage-destinations']);
+    Route::put('/destinations/{destination}', [DestinationController::class, 'update'])->name('destinations.update')->middleware(['check_permission:manage-destinations']);
+    Route::delete('/destinations/{destination}', [DestinationController::class, 'destroy'])->name('destinations.destroy')->middleware(['check_permission:manage-destinations']);
+    Route::delete('/destinations/delete-image/{image}', [DestinationController::class, 'deleteImage'])->name('destinations.images.destroy')->middleware(['check_permission:manage-destinations']);
+    // Booking routes
     Route::middleware(['check_permission:manage-bookings'])->group(function () {
-        // Quản lý chuyến đi sắp khởi hành - Đặt route này trước các route có tham số
-        Route::get('bookings/upcoming', [AdminBookingController::class, 'upcoming'])->name('bookings.upcoming');
-        Route::get('bookings/tour/{tour}/{date}', [AdminBookingController::class, 'tourDetails'])->name('bookings.tour-details');
-        Route::get('bookings/active', [AdminBookingController::class, 'active'])->name('bookings.active');
-        Route::patch('bookings/{booking}/mark-completed', [AdminBookingController::class, 'markCompleted'])->name('bookings.mark-departed');
-
-        // Các route quản lý booking khác
-        Route::get('bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
-        Route::get('bookings/{booking}', [AdminBookingController::class, 'show'])->name('bookings.show');
-        Route::post('bookings/{booking}/status', [AdminBookingController::class, 'updateStatus'])->name('bookings.update-status');
-        Route::post('bookings/{booking}/payment', [AdminBookingController::class, 'updatePaymentStatus'])->name('bookings.update-payment');
-        Route::get('bookings/{booking}/assign-guide', [AdminBookingController::class, 'assignGuide'])->name('bookings.assign-guide');
-        Route::post('bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->name('bookings.confirm');
-        Route::post('bookings/{booking}/cancel', [AdminBookingController::class, 'cancel'])->name('bookings.cancel');
-        Route::post('bookings/{tour}/{date}/assign-guide', [AdminBookingController::class, 'assignGuideByDate'])->name('bookings.assign-guide-by-date');
+        Route::get('/bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
+        Route::get('/bookings/{booking}', [AdminBookingController::class, 'show'])->name('bookings.show');
+        Route::get('/bookings/{booking}/confirm', [AdminBookingController::class, 'showConfirmForm'])->name('bookings.show-confirm');
+        Route::post('/bookings/{booking}/confirm', [AdminBookingController::class, 'confirm'])->name('bookings.confirm');
+        Route::post('/bookings/{booking}/cancel', [AdminBookingController::class, 'cancel'])->name('bookings.cancel');
+        Route::post('/bookings/{booking}/update-status', [AdminBookingController::class, 'updateStatus'])->name('bookings.update-status');
+        Route::post('/bookings/{booking}/update-payment-status', [AdminBookingController::class, 'updatePaymentStatus'])->name('bookings.update-payment-status');
+        Route::post('/bookings/{booking}/assign-guide', [AdminBookingController::class, 'assignGuide'])->name('bookings.assign-guide');
     });
 
-    // Tour departures management
-    Route::middleware(['check_permission:manage-tour-departures'])->group(function () {
-        Route::resource('tour-departures', TourDepartureController::class);
+    // Tour Review Routes
+    Route::middleware(['check_permission:manage-reviews'])->group(function () {
+        Route::get('/reviews', [TourReviewController::class, 'index'])->name('reviews.index');
+        Route::patch('/reviews/{review}/toggle-visibility', [TourReviewController::class, 'toggleVisibility'])->name('reviews.toggle-visibility');
     });
+
+    // Tour Departure Routes
+    Route::get('/tour-departures', [TourDepartureController::class, 'index'])->name('tour-departures.index');
+    Route::get('/tour-departures/create', [TourDepartureController::class, 'create'])->name('tour-departures.create');
+    Route::post('/tour-departures', [TourDepartureController::class, 'store'])->name('tour-departures.store');
+    Route::get('/tour-departures/{departure}/edit', [TourDepartureController::class, 'edit'])->name('tour-departures.edit')->middleware(['check_permission:assign-guide']);
+    Route::put('/tour-departures/{departure}', [TourDepartureController::class, 'update'])->name('tour-departures.update')->middleware(['check_permission:assign-guide']);
+    Route::delete('/tour-departures/{departure}', [TourDepartureController::class, 'destroy'])->name('tour-departures.destroy')->middleware(['check_permission:assign-guide']);
+    Route::post('/tour-departures/{departure}/assign-guide', [TourDepartureController::class, 'assignGuide'])->name('tour-departures.assign-guide');
+    Route::post('/tour-departures/{departure}/guide-confirm', [TourDepartureController::class, 'guideConfirm'])->name('tour-departures.guide-confirm');
+    Route::post('/tour-departures/{departure}/guide-reject', [TourDepartureController::class, 'guideReject'])->name('tour-departures.guide-reject');
+    Route::get('/tour-departures/{departure}/bookings', [TourDepartureController::class, 'showBookings'])->name('tour-departures.show-bookings');
+    Route::post('/tour-departures/{departure}/send-tour-info', [TourDepartureController::class, 'sendTourInfo'])->name('tour-departures.send-tour-info');
+    Route::post('/tour-departures/{departure}/complete-tour', [TourDepartureController::class, 'completeTour'])->name('tour-departures.complete-tour');
+    Route::post('/tour-departures/{departure}/start-tour', [TourDepartureController::class, 'startTour'])->name('tour-departures.start-tour');
 });
-Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
+
+
 
 require __DIR__ . '/auth.php';

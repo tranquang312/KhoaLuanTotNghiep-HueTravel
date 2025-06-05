@@ -26,12 +26,7 @@ class BookingController extends Controller
         $tour = Tour::findOrFail($request->tour_id);
         $totalPrice = ($request->people + $request->children * 0.7) * $tour->price;
 
-        // Kiểm tra số tiền tối thiểu (50 cents = 12,500 VND)
-        if ($totalPrice < 12500) {
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['total_price' => 'Số tiền thanh toán phải lớn hơn 12,500 VND (50 cents)']);
-        }
+       
 
         $booking = new Booking();
         $booking->tour_id = $request->tour_id;
@@ -72,7 +67,8 @@ class BookingController extends Controller
 
         // Cập nhật trạng thái booking
         $booking->update([
-            'status' => 'cancelled'
+            'status' => 'cancelled',
+            'tour_departure_id' => null
         ]);
 
         return redirect()->back()->with('success', 'Đã hủy đơn đặt tour thành công.');

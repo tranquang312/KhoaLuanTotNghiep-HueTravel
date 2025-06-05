@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Traits\FlashMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    use FlashMessage;
+
     public function index()
     {
         $users = User::with('roles')->get();
@@ -42,9 +45,8 @@ class UserController extends Controller
         $roles = Role::whereIn('id', $request->roles)->get();
         $user->syncRoles($roles);
 
-        return redirect()
-            ->route('admin.users.index')
-            ->with('success', 'Người dùng đã được tạo thành công.');
+        $this->flashSuccess('Người dùng đã được tạo thành công.');
+        return redirect()->route('admin.users.index');
     }
 
     public function edit(User $user)
@@ -79,24 +81,21 @@ class UserController extends Controller
         $roles = Role::whereIn('id', $request->roles)->get();
         $user->syncRoles($roles);
 
-        return redirect()
-            ->route('admin.users.index')
-            ->with('success', 'Người dùng đã được cập nhật thành công.');
+        $this->flashSuccess('Người dùng đã được cập nhật thành công.');
+        return redirect()->route('admin.users.index');
     }
 
     public function destroy(User $user)
     {
         // Không cho phép xóa chính mình
         if ($user->id === auth()->id()) {
-            return redirect()
-                ->route('admin.users.index')
-                ->with('error', 'Không thể xóa tài khoản của chính mình.');
+            $this->flashError('Không thể xóa tài khoản của chính mình.');
+            return redirect()->route('admin.users.index');
         }
 
         $user->delete();
 
-        return redirect()
-            ->route('admin.users.index')
-            ->with('success', 'Người dùng đã được xóa thành công.');
+        $this->flashSuccess('Người dùng đã được xóa thành công.');
+        return redirect()->route('admin.users.index');
     }
 }

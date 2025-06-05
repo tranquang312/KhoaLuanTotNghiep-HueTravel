@@ -18,7 +18,7 @@ class CheckPermission
         $user = $request->user();
 
         // Nếu là admin thì bỏ qua kiểm tra permission
-        if ($user && $user->hasRole('admin')) {
+        if ($user && ($user->hasRole('admin'))) {
             return $next($request);
         }
 
